@@ -344,6 +344,136 @@ fn swap_remove_first() {
     assert_eq!(rest.as_slice_mut(), &mut []);
 }
 
+#[test]
+fn retain_noop_pred_test() {
+    let mut vec: Vec<i32> = vec![1, 2, 3, 4];
+    let (_, mut rest) = vec.split_tail(1);
+    assert_eq!(rest.as_slice_mut(), &mut [2, 3, 4]);
+    rest.retain(|_| true);
+    assert_eq!(rest.as_slice_mut(), &mut [2, 3, 4]);
+}
+
+#[test]
+fn retain_normal_test() {
+    let mut vec: Vec<i32> = vec![1, 2, 3, 4, 5, 7, 6];
+    let (_, mut rest) = vec.split_tail(1);
+    assert_eq!(rest.as_slice_mut(), &mut [2, 3, 4, 5, 7, 6]);
+    rest.retain(|n| *n % 2 == 0);
+    assert_eq!(rest.as_slice_mut(), &mut [2, 4, 6]);
+}
+
+#[test]
+fn retain_all_false_test() {
+    let mut vec: Vec<i32> = vec![1, 2, 3, 4];
+    let (_, mut rest) = vec.split_tail(1);
+    assert_eq!(rest.as_slice_mut(), &mut [2, 3, 4]);
+    rest.retain(|_| false);
+    assert_eq!(rest.as_slice_mut(), &mut []);
+}
+
+#[test]
+fn retain_once_and_false_test() {
+    let mut vec: Vec<i32> = vec![1, 2];
+    let (_, mut rest) = vec.split_tail(1);
+    assert_eq!(rest.as_slice_mut(), &mut [2]);
+    rest.retain(|_| false);
+    assert_eq!(rest.as_slice_mut(), &mut []);
+}
+
+#[test]
+fn retain_once_and_true_test() {
+    let mut vec: Vec<i32> = vec![1, 2];
+    let (_, mut rest) = vec.split_tail(1);
+    assert_eq!(rest.as_slice_mut(), &mut [2]);
+    rest.retain(|_| true);
+    assert_eq!(rest.as_slice_mut(), &mut [2]);
+}
+
+#[test]
+fn retain_empty_and_false_test() {
+    let mut vec: Vec<i32> = vec![1];
+    let (_, mut rest) = vec.split_tail(1);
+    assert_eq!(rest.as_slice_mut(), &mut []);
+    rest.retain(|_| false);
+    assert_eq!(rest.as_slice_mut(), &mut []);
+}
+
+#[test]
+fn retain_empty_and_true_test() {
+    let mut vec: Vec<i32> = vec![1];
+    let (_, mut rest) = vec.split_tail(1);
+    assert_eq!(rest.as_slice_mut(), &mut []);
+    rest.retain(|_| true);
+    assert_eq!(rest.as_slice_mut(), &mut []);
+}
+
+#[test]
+fn retain_unwind_test() {
+    {
+        let mut vec: Vec<i32> = vec![1, 2, 3, 4, 5, 8, 7, 6];
+        let (_, mut rest) = vec.split_tail(1);
+        assert_eq!(rest.as_slice_mut(), &mut [2, 3, 4, 5, 8, 7, 6]);
+        let arest = std::panic::AssertUnwindSafe(&mut rest);
+        std::panic::catch_unwind(|| {
+            {arest}.0.retain(|&n| {
+                assert_ne!(n, 8);
+                n % 2 == 0
+            });
+        }).unwrap_err();
+        assert_eq!(rest.as_slice_mut(), &mut [2, 4, /*panic point*/8, 7, 6]);
+    }
+    {
+        let mut vec: Vec<i32> = vec![1, 2];
+        let (_, mut rest) = vec.split_tail(1);
+        assert_eq!(rest.as_slice_mut(), &mut [2]);
+        let arest = std::panic::AssertUnwindSafe(&mut rest);
+        std::panic::catch_unwind(|| {
+            {arest}.0.retain(|&_| {
+                panic!()
+            });
+        }).unwrap_err();
+        assert_eq!(rest.as_slice_mut(), &mut [/*panic point*/2]);
+    }
+    {
+        let mut vec: Vec<i32> = vec![1, 2, 3];
+        let (_, mut rest) = vec.split_tail(1);
+        assert_eq!(rest.as_slice_mut(), &mut [2, 3]);
+        let arest = std::panic::AssertUnwindSafe(&mut rest);
+        std::panic::catch_unwind(|| {
+            {arest}.0.retain(|&_| {
+                panic!()
+            });
+        }).unwrap_err();
+        assert_eq!(rest.as_slice_mut(), &mut [/*panic point*/2, 3]);
+    }
+    {
+        let mut vec: Vec<i32> = vec![1, 2, 3];
+        let (_, mut rest) = vec.split_tail(1);
+        assert_eq!(rest.as_slice_mut(), &mut [2, 3]);
+        let arest = std::panic::AssertUnwindSafe(&mut rest);
+        std::panic::catch_unwind(|| {
+            {arest}.0.retain(|&n| {
+                assert_eq!(n, 2);
+                true
+            });
+        }).unwrap_err();
+        assert_eq!(rest.as_slice_mut(), &mut [2, /*panic point*/3]);
+    }
+    {
+        let mut vec: Vec<i32> = vec![1, 2, 3];
+        let (_, mut rest) = vec.split_tail(1);
+        assert_eq!(rest.as_slice_mut(), &mut [2, 3]);
+        let arest = std::panic::AssertUnwindSafe(&mut rest);
+        std::panic::catch_unwind(|| {
+            {arest}.0.retain(|&n| {
+                assert_eq!(n, 2);
+                false
+            });
+        }).unwrap_err();
+        assert_eq!(rest.as_slice_mut(), &mut [/*panic point*/3]);
+    }
+}
+
 fn _borrow_sign_test<'a, T>(x: &'a mut TailVec<'a, T>) -> &'a mut [T] {
     x.as_slice_mut()
 }

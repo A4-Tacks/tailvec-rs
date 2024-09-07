@@ -65,5 +65,5 @@ assert_eq!(vec, [1, 2, 3, 4, 5, 6]);
 assert!(core::ptr::eq(vec.as_ptr(), a));
 ```
 
-# Safe
+# Safety
 - miri has passed

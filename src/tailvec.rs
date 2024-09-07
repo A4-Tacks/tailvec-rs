@@ -218,6 +218,10 @@ impl<'a, T, V: VecLike<T = T>> Default for TailVec<'a, T, V> {
     }
 }
 impl<'a, T, V: VecLike<T = T>> TailVec<'a, T, V> {
+    pub(crate) unsafe fn parts(&mut self) -> &mut [MaybeUninit<T>] {
+        unsafe { self.parts.as_mut() }
+    }
+
     /// Get tail partial slice
     ///
     /// # Examples

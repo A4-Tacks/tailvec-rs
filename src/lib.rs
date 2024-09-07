@@ -2,6 +2,7 @@
 #![doc = include_str!("../README.md")]
 
 mod tailvec;
+mod retain;
 pub use tailvec::*;
 
 #[cfg(test)]
