@@ -28,9 +28,13 @@ unsafe fn slice_assume_init_mut<T>(
 ///
 /// # Safety
 /// - [`..self.len()`] of [`self.spare_capacity_mut()`] must be initialized
+/// - [`self.capacity()`] must be equals [`self.len()`]
+///   plus [`self.spare_capacity_mut().len()`]
 ///
+/// [`self.len()`]: VecLike::len
 /// [`..self.len()`]: VecLike::len
 /// [`self.spare_capacity_mut()`]: VecLike::spare_capacity_mut
+/// [`self.spare_capacity_mut().len()`]: VecLike::spare_capacity_mut
 pub unsafe trait VecLike {
     type T;
 
@@ -102,9 +106,8 @@ unsafe impl<T, V: VecLike<T = T>> VecLike for TailVec<'_, T, V> {
 }
 
 
-trait Sealed { }
 /// Split at index, tail part is [`TailVec`]
-pub trait SplitTail: Sealed + VecLike + Sized {
+pub trait SplitTail: VecLike + Sized {
     #![allow(private_bounds)]
 
     /// Split at index, tail part is [`TailVec`]
@@ -145,9 +148,7 @@ pub trait SplitTail: Sealed + VecLike + Sized {
         TailVec<'_, Self::T, Self>,
     );
 }
-impl<T> Sealed for Vec<T> { }
-impl<T, V: VecLike<T = T>> Sealed for TailVec<'_, T, V> { }
-impl<T: Sealed + VecLike> SplitTail for T {
+impl<T: VecLike> SplitTail for T {
     #[track_caller]
     fn split_tail(&mut self, mid: usize) -> (
         &mut [Self::T],
@@ -409,6 +410,9 @@ impl<'a, T, V: VecLike<T = T>> TailVec<'a, T, V> {
     /// drop(rest);
     /// assert_eq!(vec, vec![1]);
     /// ```
+    ///
+    /// [`len()`]: TailVec::len
+    /// [`capacity()`]: TailVec::capacity
     pub fn pop(&mut self) -> Option<T> {
         self.try_len(-1).ok()?;
         let last_idx = self.len();
@@ -570,6 +574,7 @@ impl<'a, T, V: VecLike<T = T>> TailVec<'a, T, V> {
     /// ```
     ///
     /// [`len()`]: TailVec::len
+    /// [`capacity()`]: TailVec::capacity
     #[track_caller]
     pub fn insert(&mut self, index: usize, element: T) -> Result<(), T> {
         #[cold]
