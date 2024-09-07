@@ -1,7 +1,14 @@
 #![allow(clippy::partialeq_ne_impl)]
 
 use std::{
-    borrow::{Borrow, BorrowMut}, cmp::Ordering, fmt::Debug, hash::Hash, marker::PhantomData, mem::{transmute, MaybeUninit}, ops::{Deref, DerefMut, Index, IndexMut}, ptr::NonNull
+    borrow::{Borrow, BorrowMut},
+    cmp::Ordering,
+    fmt::Debug,
+    hash::Hash,
+    marker::PhantomData,
+    mem::{transmute, MaybeUninit},
+    ops::{Deref, DerefMut, Index, IndexMut},
+    ptr::{self, NonNull},
 };
 
 unsafe fn slice_assume_init<T>(
@@ -299,7 +306,7 @@ impl<'a, T, V: VecLike<T = T>> TailVec<'a, T, V> {
         self.vec_capacity() - self.capacity()
     }
 
-    /// Get len of [`VecLike`]
+    /// Get inner len of [`VecLike`]
     ///
     /// # Examples
     /// ```
@@ -323,6 +330,7 @@ impl<'a, T, V: VecLike<T = T>> TailVec<'a, T, V> {
     /// - `new_len` less than zero return `Err(())`
     ///
     /// [`capacity`]: Self::capacity
+    #[inline]
     fn try_len(&mut self, offset: isize) -> Result<usize, ()> {
         let old_len = self.len();
         let cap = self.capacity();
@@ -405,9 +413,121 @@ impl<'a, T, V: VecLike<T = T>> TailVec<'a, T, V> {
         Some(value)
     }
 
+    /// Remove and return element of index
+    ///
+    /// *See [`Vec::remove`] for more documents*
+    ///
+    /// # Panics
+    /// - `index` greater than or equal [`len()`]
+    ///
+    /// # Examples
+    /// ```
+    /// # use tailvec::*;
+    /// let mut vec = vec![1, 2, 3];
+    /// let (_, mut rest) = vec.split_tail(1);
+    /// assert_eq!(rest, &mut [2, 3]);
+    ///
+    /// assert_eq!(rest.remove(0), 2);
+    /// assert_eq!(rest.remove(0), 3);
+    ///
+    /// drop(rest);
+    /// assert_eq!(vec, vec![1]);
+    /// ```
+    ///
+    /// ```
+    /// # use tailvec::*;
+    /// let mut vec = vec![1, 2, 3];
+    /// let (_, mut rest) = vec.split_tail(1);
+    /// assert_eq!(rest, &mut [2, 3]);
+    ///
+    /// assert_eq!(rest.remove(1), 3);
+    /// assert_eq!(rest.remove(0), 2);
+    ///
+    /// drop(rest);
+    /// assert_eq!(vec, vec![1]);
+    /// ```
+    ///
+    /// [`len()`]: TailVec::len
     #[track_caller]
-    fn _remove(&mut self, _index: usize) -> Result<T, ()> {
-        unimplemented!("记得给越界函数打上cold")
+    pub fn remove(&mut self, index: usize) -> T {
+        #[cold]
+        #[inline(never)]
+        #[track_caller]
+        fn assert_fail(index: usize, len: usize) -> ! {
+            panic!("removal index (is {index}) should be < len (is {len})")
+        }
+
+        let len = self.len();
+        if index >= len {
+            assert_fail(index, len)
+        }
+
+        unsafe {
+            let ret;
+            {
+                let fst = self.parts.as_mut()
+                    .as_mut_ptr();
+                let ptr = fst.add(index);
+
+                ret = ptr.read().assume_init();
+
+                ptr::copy(ptr.add(1), ptr, len-index-1);
+                self.try_len(-1).unwrap();
+            }
+            ret
+        }
+    }
+
+    /// Remove and return element of index
+    ///
+    /// The operations is to swap tail element into removed index
+    ///
+    /// *See [`Vec::swap_remove`] for more documents*
+    ///
+    /// # Panics
+    /// - `index` greater than or equal [`len()`]
+    ///
+    /// # Examples
+    /// ```
+    /// # use tailvec::*;
+    /// let mut vec = vec![1, 2, 3, 4, 5];
+    /// let (_, mut rest) = vec.split_tail(1);
+    /// assert_eq!(rest, &mut [2, 3, 4, 5]);
+    ///
+    /// assert_eq!(rest.swap_remove(1), 3);
+    /// assert_eq!(rest, &mut [2, 5, 4]);
+    ///
+    /// assert_eq!(rest.swap_remove(2), 4);
+    /// assert_eq!(rest, &mut [2, 5]);
+    ///
+    /// assert_eq!(rest.swap_remove(0), 2);
+    /// assert_eq!(rest, &mut [5]);
+    ///
+    /// assert_eq!(rest.swap_remove(0), 5);
+    /// assert_eq!(rest, &mut []);
+    /// ```
+    ///
+    /// [`len()`]: TailVec::len
+    #[track_caller]
+    pub fn swap_remove(&mut self, index: usize) -> T {
+        #[cold]
+        #[inline(never)]
+        #[track_caller]
+        fn assert_fail(index: usize, len: usize) -> ! {
+            panic!("swap_remove index (is {index}) should be < len (is {len})")
+        }
+
+        let len = self.len();
+        if index >= len {
+            assert_fail(index, len)
+        }
+
+        self.try_len(-1).unwrap();
+        let tail = self.len();
+        unsafe {
+            self.parts.as_mut().swap(index, tail);
+            self.parts.as_ref()[tail].assume_init_read()
+        }
     }
 }
 impl<'a, T: Debug, V: VecLike<T = T>> Debug for TailVec<'a, T, V> {
