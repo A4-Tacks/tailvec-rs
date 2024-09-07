@@ -353,6 +353,9 @@ impl<'a, T, V: VecLike<T = T>> TailVec<'a, T, V> {
     /// Push a value to tail partial,
     /// but [`len()`] must be less than [`capacity()`]
     ///
+    /// # Results
+    /// - `Err` when `new_len` greater than or equal [`capacity()`]
+    ///
     /// # Examples
     /// ```
     /// # use tailvec::*;
@@ -387,6 +390,9 @@ impl<'a, T, V: VecLike<T = T>> TailVec<'a, T, V> {
     }
 
     /// Pop last value
+    ///
+    /// # Results
+    /// - `None` when [`len()`] by zero
     ///
     /// # Examples
     /// ```
@@ -536,6 +542,9 @@ impl<'a, T, V: VecLike<T = T>> TailVec<'a, T, V> {
     ///
     /// # Panics
     /// - `index` greater than [`len()`]
+    ///
+    /// # Results
+    /// - `Err` when `new_len` greater than or equal [`capacity()`]
     ///
     /// # Examples
     /// ```
