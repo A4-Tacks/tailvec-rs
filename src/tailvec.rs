@@ -34,13 +34,13 @@ unsafe fn slice_assume_init_mut<T>(
 pub unsafe trait VecLike {
     type T;
 
-    /// [`Vec`] valided elements length
+    /// [`Vec`] initialized elements length
     fn len(&self) -> usize;
 
     /// [`Vec`] capacity
     fn capacity(&self) -> usize;
 
-    /// [`Vec`] uninit parts
+    /// [`Vec`] uninitialized partials
     fn spare_capacity_mut(&mut self) -> &mut [MaybeUninit<Self::T>];
 
     /// This is lower operation
