@@ -293,6 +293,57 @@ fn forget_test() {
     assert_eq!(vec, []);
 }
 
+#[test]
+fn remove_last() {
+    let mut vec: Vec<i32> = vec![1, 2, 3, 4];
+    let (_, mut rest) = vec.split_tail(1);
+    assert_eq!(rest.as_slice_mut(), &mut [2, 3, 4]);
+    assert_eq!(rest.remove(2), 4);
+    assert_eq!(rest.remove(1), 3);
+    assert_eq!(rest.as_slice_mut(), &mut [2]);
+    assert_eq!(rest.remove(0), 2);
+    assert_eq!(rest.as_slice_mut(), &mut []);
+}
+
+#[test]
+fn swap_remove_last() {
+    let mut vec: Vec<i32> = vec![1, 2, 3, 4];
+    let (_, mut rest) = vec.split_tail(1);
+    assert_eq!(rest.as_slice_mut(), &mut [2, 3, 4]);
+    assert_eq!(rest.swap_remove(2), 4);
+    assert_eq!(rest.as_slice_mut(), &mut [2, 3]);
+    assert_eq!(rest.swap_remove(1), 3);
+    assert_eq!(rest.as_slice_mut(), &mut [2]);
+    assert_eq!(rest.swap_remove(0), 2);
+    assert_eq!(rest.as_slice_mut(), &mut []);
+}
+
+#[test]
+fn remove_first() {
+    let mut vec: Vec<i32> = vec![1, 2, 3, 4];
+    let (_, mut rest) = vec.split_tail(1);
+    assert_eq!(rest.as_slice_mut(), &mut [2, 3, 4]);
+    assert_eq!(rest.remove(0), 2);
+    assert_eq!(rest.as_slice_mut(), &mut [3, 4]);
+    assert_eq!(rest.remove(0), 3);
+    assert_eq!(rest.as_slice_mut(), &mut [4]);
+    assert_eq!(rest.remove(0), 4);
+    assert_eq!(rest.as_slice_mut(), &mut []);
+}
+
+#[test]
+fn swap_remove_first() {
+    let mut vec: Vec<i32> = vec![1, 2, 3, 4];
+    let (_, mut rest) = vec.split_tail(1);
+    assert_eq!(rest.as_slice_mut(), &mut [2, 3, 4]);
+    assert_eq!(rest.swap_remove(0), 2);
+    assert_eq!(rest.as_slice_mut(), &mut [4, 3]);
+    assert_eq!(rest.swap_remove(0), 4);
+    assert_eq!(rest.as_slice_mut(), &mut [3]);
+    assert_eq!(rest.swap_remove(0), 3);
+    assert_eq!(rest.as_slice_mut(), &mut []);
+}
+
 fn _borrow_sign_test<'a, T>(x: &'a mut TailVec<'a, T>) -> &'a mut [T] {
     x.as_slice_mut()
 }

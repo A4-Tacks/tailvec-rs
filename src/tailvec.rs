@@ -529,6 +529,65 @@ impl<'a, T, V: VecLike<T = T>> TailVec<'a, T, V> {
             self.parts.as_ref()[tail].assume_init_read()
         }
     }
+
+    /// Insert element to index
+    ///
+    /// *See [`Vec::insert`] for more documents*
+    ///
+    /// # Panics
+    /// - `index` greater than [`len()`]
+    ///
+    /// # Examples
+    /// ```
+    /// # use tailvec::*;
+    /// let mut vec = vec![1, 3, 5];
+    /// vec.reserve_exact(3);
+    /// assert_eq!(vec.capacity(), 6);
+    /// let (_, mut rest) = vec.split_tail(1);
+    /// assert_eq!(rest, &mut [3, 5]);
+    /// assert_eq!(rest.capacity(), 5);
+    ///
+    /// assert_eq!(rest.insert(0, 2), Ok(()));
+    /// assert_eq!(rest, &mut [2, 3, 5]);
+    ///
+    /// assert_eq!(rest.insert(2, 4), Ok(()));
+    /// assert_eq!(rest, &mut [2, 3, 4, 5]);
+    ///
+    /// assert_eq!(rest.insert(4, 6), Ok(()));
+    /// assert_eq!(rest, &mut [2, 3, 4, 5, 6]);
+    ///
+    /// assert_eq!(rest.insert(5, 7), Err(7)); // overflow of capacity
+    /// assert_eq!(rest, &mut [2, 3, 4, 5, 6]);
+    /// ```
+    ///
+    /// [`len()`]: TailVec::len
+    #[track_caller]
+    pub fn insert(&mut self, index: usize, element: T) -> Result<(), T> {
+        #[cold]
+        #[inline(never)]
+        #[track_caller]
+        fn assert_fail(index: usize, len: usize) -> ! {
+            panic!("insertion index (is {index}) should be <= len (is {len})")
+        }
+
+        let old_len = self.len();
+        if index > old_len {
+            assert_fail(index, old_len)
+        }
+
+        if self.try_len(1).is_err() {
+            return Err(element);
+        }
+
+        unsafe {
+            let fst = self.parts.as_mut()
+                .as_mut_ptr();
+            let ptr = fst.add(index);
+            ptr::copy(ptr, ptr.add(1), old_len - index);
+            ptr.write(MaybeUninit::new(element));
+            Ok(())
+        }
+    }
 }
 impl<'a, T: Debug, V: VecLike<T = T>> Debug for TailVec<'a, T, V> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
