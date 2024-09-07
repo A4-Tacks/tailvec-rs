@@ -20,7 +20,7 @@ unsafe fn slice_assume_init_mut<T>(
 /// Like vec struct trait
 ///
 /// # Safety
-/// - [`..self.len()`] of [`self.spare_capacity_mut()`] must be inited
+/// - [`..self.len()`] of [`self.spare_capacity_mut()`] must be initialized
 ///
 /// [`..self.len()`]: VecLike::len
 /// [`self.spare_capacity_mut()`]: VecLike::spare_capacity_mut
@@ -40,7 +40,7 @@ pub unsafe trait VecLike {
     ///
     /// # Safety
     /// - `new_len` must be less than or equal [`capacity`]
-    /// - `old_len..new_len` must be inited
+    /// - `old_len..new_len` must be initialized
     ///
     /// [`capacity`]: Self::capacity
     unsafe fn set_len(&mut self, new_len: usize);
@@ -96,19 +96,43 @@ unsafe impl<T, V: VecLike<T = T>> VecLike for TailVec<'_, T, V> {
 
 
 trait Sealed { }
+/// Split at index, tail part is [`TailVec`]
 pub trait SplitTail: Sealed + VecLike + Sized {
     #![allow(private_bounds)]
 
     /// Split at index, tail part is [`TailVec`]
     ///
-    /// It can call [`push`] and [`pop`] operations.
+    /// It can call [`push`] and [`pop`] etc.
     ///
     /// # Panics
     /// - `mid` greater than [`len`]
     ///
+    /// # Leaking
+    /// If the returned [`TailVec`] goes out of scope without being dropped
+    /// (due to [`mem::forget`], for example),
+    /// the [`Self`] may have lost and leaked elements arbitrarily,
+    /// including elements outside the range.
+    ///
+    /// # Examples
+    /// ```
+    /// # use tailvec::*;
+    /// let mut vec = vec![1, 2, 3];
+    /// let (left, mut rest) = vec.split_tail(2);
+    /// assert_eq!(left, &mut [1, 2]);
+    /// assert_eq!(rest, &mut [3]);
+    ///
+    /// rest.pop().unwrap();
+    /// assert_eq!(rest, &mut []);
+    ///
+    /// assert_eq!(rest.pop(), None);
+    /// assert_eq!(rest, &mut []);
+    /// ```
+    ///
     /// [`push`]: TailVec::push
     /// [`pop`]: TailVec::pop
     /// [`len`]: VecLike::len
+    /// [`Self`]: SplitTail
+    /// [`mem::forget`]: core::mem::forget
     fn split_tail(&mut self, mid: usize) -> (
         &mut [Self::T],
         TailVec<'_, Self::T, Self>,
@@ -186,6 +210,16 @@ impl<'a, T, V: VecLike<T = T>> Default for TailVec<'a, T, V> {
     }
 }
 impl<'a, T, V: VecLike<T = T>> TailVec<'a, T, V> {
+    /// Get tail partial slice
+    ///
+    /// # Examples
+    /// ```
+    /// # use tailvec::*;
+    /// let mut vec = vec![1, 2, 3];
+    /// let (left, rest) = vec.split_tail(2);
+    /// assert_eq!(left, &mut [1, 2]);
+    /// assert_eq!(rest.as_slice(), &[3]);
+    /// ```
     pub fn as_slice(&self) -> &[T] {
         unsafe {
             let slice = self.parts.as_ref();
@@ -193,6 +227,16 @@ impl<'a, T, V: VecLike<T = T>> TailVec<'a, T, V> {
         }
     }
 
+    /// Get tail partial mutable slice
+    ///
+    /// # Examples
+    /// ```
+    /// # use tailvec::*;
+    /// let mut vec = vec![1, 2, 3];
+    /// let (left, mut rest) = vec.split_tail(2);
+    /// assert_eq!(left, &mut [1, 2]);
+    /// assert_eq!(rest.as_slice_mut(), &mut [3]);
+    /// ```
     pub fn as_slice_mut(&mut self) -> &mut [T] {
         unsafe {
             let slice = self.parts.as_mut();
@@ -200,6 +244,15 @@ impl<'a, T, V: VecLike<T = T>> TailVec<'a, T, V> {
         }
     }
 
+    /// Consume [`TailVec`] into initialized mutable slice
+    ///
+    /// # Examples
+    /// ```
+    /// # use tailvec::*;
+    /// let mut vec = vec![1, 2, 3];
+    /// let (_, rest) = vec.split_tail(2);
+    /// assert_eq!(rest.into_slice(), &mut [3]);
+    /// ```
     pub fn into_slice(self) -> &'a mut [T] {
         let rng = ..self.len();
         let mut parts = self.parts;
@@ -210,6 +263,19 @@ impl<'a, T, V: VecLike<T = T>> TailVec<'a, T, V> {
         }
     }
 
+    /// Get inner [`VecLike`] capacity
+    ///
+    /// # Examples
+    /// ```
+    /// # use tailvec::*;
+    /// let mut vec = vec![1, 2, 3];
+    /// vec.reserve_exact(2);
+    /// assert_eq!(vec.capacity(), 5);
+    /// let (left, rest) = vec.split_tail(1);
+    /// assert_eq!(left.len(), 1);
+    /// assert_eq!(rest.capacity(), 4);
+    /// assert_eq!(rest.vec_capacity(), 5);
+    /// ```
     pub fn vec_capacity(&self) -> usize {
         self.vec.as_ref()
             .map(|ptr| unsafe { ptr.as_ref() })
@@ -217,10 +283,35 @@ impl<'a, T, V: VecLike<T = T>> TailVec<'a, T, V> {
             .unwrap_or_default()
     }
 
+    /// Get splitted point of [`VecLike`]
+    ///
+    /// # Examples
+    /// ```
+    /// # use tailvec::*;
+    /// let mut vec = vec![1, 2, 3, 4, 5];
+    /// let (left, rest) = vec.split_tail(3);
+    ///
+    /// assert_eq!(left.len(), 3);
+    /// assert_eq!(rest.len(), 2);
+    /// assert_eq!(rest.split_point(), 3);
+    /// ```
     pub fn split_point(&self) -> usize {
         self.vec_capacity() - self.capacity()
     }
 
+    /// Get len of [`VecLike`]
+    ///
+    /// # Examples
+    /// ```
+    /// # use tailvec::*;
+    /// let mut vec = vec![1, 2, 3, 4, 5];
+    /// assert_eq!(vec.len(), 5);
+    ///
+    /// let (left, rest) = vec.split_tail(3);
+    /// assert_eq!(left.len(), 3);
+    /// assert_eq!(rest.len(), 2);
+    /// assert_eq!(rest.vec_len(), 5);
+    /// ```
     pub fn vec_len(&self) -> usize {
         self.split_point() + self.len()
     }
@@ -251,6 +342,33 @@ impl<'a, T, V: VecLike<T = T>> TailVec<'a, T, V> {
         Ok(old_len)
     }
 
+    /// Push a value to tail partial,
+    /// but [`len()`] must be less than [`capacity()`]
+    ///
+    /// # Examples
+    /// ```
+    /// # use tailvec::*;
+    /// let mut vec = vec![1, 2, 3];
+    /// vec.reserve_exact(2);
+    /// assert_eq!(vec.capacity(), 5);
+    ///
+    /// let (left, mut rest) = vec.split_tail(2);
+    /// assert_eq!(left, &mut [1, 2]);
+    /// assert_eq!(rest, &mut [3]);
+    /// assert_eq!(rest.capacity(), 3);
+    ///
+    /// assert_eq!(rest.push(4), Ok(()));
+    /// assert_eq!(rest.push(5), Ok(()));
+    /// assert_eq!(rest.push(6), Err(6));
+    /// assert_eq!(rest, &mut [3, 4, 5]);
+    ///
+    /// drop(rest);
+    /// assert_eq!(vec, vec![1, 2, 3, 4, 5]);
+    /// assert_eq!(vec.capacity(), 5);
+    /// ```
+    ///
+    /// [`len()`]: TailVec::len
+    /// [`capacity()`]: TailVec::capacity
     pub fn push(&mut self, value: T) -> Result<(), T> {
         let Ok(old_len) = self.try_len(1) else {
             return Err(value);
@@ -260,6 +378,23 @@ impl<'a, T, V: VecLike<T = T>> TailVec<'a, T, V> {
         Ok(())
     }
 
+    /// Pop last value
+    ///
+    /// # Examples
+    /// ```
+    /// # use tailvec::*;
+    /// let mut vec = vec![1, 2, 3];
+    /// let (left, mut rest) = vec.split_tail(1);
+    /// assert_eq!(left, &mut [1]);
+    /// assert_eq!(rest, &mut [2, 3]);
+    ///
+    /// assert_eq!(rest.pop(), Some(3));
+    /// assert_eq!(rest.pop(), Some(2));
+    /// assert_eq!(rest.pop(), None);
+    ///
+    /// drop(rest);
+    /// assert_eq!(vec, vec![1]);
+    /// ```
     pub fn pop(&mut self) -> Option<T> {
         self.try_len(-1).ok()?;
         let last_idx = self.len();

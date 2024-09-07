@@ -126,6 +126,19 @@ fn pop_test() {
     assert_eq!(rest.split_point(), 1);
     assert_eq!(rest.vec_len(), 1);
     assert_eq!(rest.vec_capacity(), 5);
+    assert_eq!(left, [Box::new("a")]);
+    assert_eq!(rest, []);
+    assert_eq!(rest.pop(), None);
+    assert_eq!(rest, []);
+    assert_eq!(left.len(), 1);
+    assert_eq!(rest.len(), 0);
+    assert_eq!(rest.capacity(), 4);
+    assert_eq!(rest.split_point(), 1);
+    assert_eq!(rest.vec_len(), 1);
+    assert_eq!(rest.vec_capacity(), 5);
+    assert_eq!(rest.pop(), None);
+    assert_eq!(rest.pop(), None);
+    assert_eq!(left, [Box::new("a")]);
 
     for _ in 0..5 {
         assert_eq!(rest.pop(), None);
@@ -137,6 +150,8 @@ fn pop_test() {
         assert_eq!(rest.vec_len(), 1);
         assert_eq!(rest.vec_capacity(), 5);
     }
+    drop(rest);
+    assert_eq!(left, [Box::new("a")]);
 }
 
 #[test]
@@ -249,13 +264,16 @@ fn into_slice() {
 #[test]
 fn empty_test() {
     let mut vec: Vec<i32> = vec![];
-    let (left, rest) = vec.split_tail(0);
+    let (left, mut rest) = vec.split_tail(0);
     assert_eq!(left.len(), 0);
     assert_eq!(rest.len(), 0);
     assert_eq!(rest.capacity(), 0);
     assert_eq!(rest.vec_len(), 0);
     assert_eq!(rest.vec_capacity(), 0);
     assert_eq!(rest.split_point(), 0);
+    assert_eq!(rest.as_slice(), &[]);
+    assert_eq!(rest.as_slice_mut(), &mut []);
+    assert_eq!(rest.into_slice(), &mut []);
 }
 
 #[test]
