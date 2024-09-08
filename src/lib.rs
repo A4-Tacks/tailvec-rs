@@ -3,6 +3,8 @@
 
 mod tailvec;
 mod retain;
+mod drain;
+mod utils;
 pub use tailvec::*;
 
 #[cfg(test)]

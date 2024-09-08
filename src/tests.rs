@@ -1,6 +1,30 @@
-use std::mem::forget;
+use std::{mem::forget, panic::{catch_unwind, AssertUnwindSafe}};
 
 use super::*;
+
+#[derive(Debug, PartialEq, Eq)]
+struct PanicDrop;
+
+impl Drop for PanicDrop {
+    fn drop(&mut self) {
+        panic!("panic in droping")
+    }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+enum IfPanic<T> {
+    Data(T),
+    Panic(PanicDrop),
+}
+impl<T: PartialEq> PartialEq<T> for IfPanic<T> {
+    fn eq(&self, other: &T) -> bool {
+        match self {
+            Data(data) => data == other,
+            Panic(_) => true,
+        }
+    }
+}
+use IfPanic::*;
 
 #[test]
 fn new() {
@@ -499,8 +523,8 @@ fn retain_unwind_test() {
         let mut vec: Vec<i32> = vec![1, 2, 3, 4, 5, 8, 7, 6];
         let (_, mut rest) = vec.split_tail(1);
         assert_eq!(rest.as_slice_mut(), &mut [2, 3, 4, 5, 8, 7, 6]);
-        let arest = std::panic::AssertUnwindSafe(&mut rest);
-        std::panic::catch_unwind(|| {
+        let arest = AssertUnwindSafe(&mut rest);
+        catch_unwind(|| {
             {arest}.0.retain(|&n| {
                 assert_ne!(n, 8);
                 n % 2 == 0
@@ -512,8 +536,8 @@ fn retain_unwind_test() {
         let mut vec: Vec<i32> = vec![1, 2];
         let (_, mut rest) = vec.split_tail(1);
         assert_eq!(rest.as_slice_mut(), &mut [2]);
-        let arest = std::panic::AssertUnwindSafe(&mut rest);
-        std::panic::catch_unwind(|| {
+        let arest = AssertUnwindSafe(&mut rest);
+        catch_unwind(|| {
             {arest}.0.retain(|&_| {
                 panic!()
             });
@@ -524,8 +548,8 @@ fn retain_unwind_test() {
         let mut vec: Vec<i32> = vec![1, 2, 3];
         let (_, mut rest) = vec.split_tail(1);
         assert_eq!(rest.as_slice_mut(), &mut [2, 3]);
-        let arest = std::panic::AssertUnwindSafe(&mut rest);
-        std::panic::catch_unwind(|| {
+        let arest = AssertUnwindSafe(&mut rest);
+        catch_unwind(|| {
             {arest}.0.retain(|&_| {
                 panic!()
             });
@@ -536,8 +560,8 @@ fn retain_unwind_test() {
         let mut vec: Vec<i32> = vec![1, 2, 3];
         let (_, mut rest) = vec.split_tail(1);
         assert_eq!(rest.as_slice_mut(), &mut [2, 3]);
-        let arest = std::panic::AssertUnwindSafe(&mut rest);
-        std::panic::catch_unwind(|| {
+        let arest = AssertUnwindSafe(&mut rest);
+        catch_unwind(|| {
             {arest}.0.retain(|&n| {
                 assert_eq!(n, 2);
                 true
@@ -549,8 +573,8 @@ fn retain_unwind_test() {
         let mut vec: Vec<i32> = vec![1, 2, 3];
         let (_, mut rest) = vec.split_tail(1);
         assert_eq!(rest.as_slice_mut(), &mut [2, 3]);
-        let arest = std::panic::AssertUnwindSafe(&mut rest);
-        std::panic::catch_unwind(|| {
+        let arest = AssertUnwindSafe(&mut rest);
+        catch_unwind(|| {
             {arest}.0.retain(|&n| {
                 assert_eq!(n, 2);
                 false
@@ -563,8 +587,8 @@ fn retain_unwind_test() {
         let (_, mut rest) = vec.split_tail(1);
         let (_, mut rest) = rest.split_tail(1);
         assert_eq!(rest.as_slice_mut(), &mut [3, 4, 5]);
-        let arest = std::panic::AssertUnwindSafe(&mut rest);
-        std::panic::catch_unwind(|| {
+        let arest = AssertUnwindSafe(&mut rest);
+        catch_unwind(|| {
             {arest}.0.retain(|&n| {
                 assert_eq!(n, 3);
                 true
@@ -577,8 +601,8 @@ fn retain_unwind_test() {
         let (_, mut rest) = vec.split_tail(1);
         let (_, mut rest) = rest.split_tail(1);
         assert_eq!(rest.as_slice_mut(), &mut [3, 4, 5]);
-        let arest = std::panic::AssertUnwindSafe(&mut rest);
-        std::panic::catch_unwind(|| {
+        let arest = AssertUnwindSafe(&mut rest);
+        catch_unwind(|| {
             {arest}.0.retain(|&n| {
                 assert_eq!(n, 3);
                 false
@@ -591,8 +615,8 @@ fn retain_unwind_test() {
         let (_, mut rest) = vec.split_tail(1);
         let (_, mut rest) = rest.split_tail(1);
         assert_eq!(rest.as_slice_mut(), &mut [3, 4, 5]);
-        let arest = std::panic::AssertUnwindSafe(&mut rest);
-        std::panic::catch_unwind(|| {
+        let arest = AssertUnwindSafe(&mut rest);
+        catch_unwind(|| {
             {arest}.0.retain(|&n| {
                 assert!(n == 3 || n == 4, "{n}");
                 true
@@ -605,8 +629,8 @@ fn retain_unwind_test() {
         let (_, mut rest) = vec.split_tail(1);
         let (_, mut rest) = rest.split_tail(1);
         assert_eq!(rest.as_slice_mut(), &mut [3, 4, 5]);
-        let arest = std::panic::AssertUnwindSafe(&mut rest);
-        std::panic::catch_unwind(|| {
+        let arest = AssertUnwindSafe(&mut rest);
+        catch_unwind(|| {
             {arest}.0.retain(|&n| {
                 assert!(n == 3 || n == 4, "{n}");
                 false
@@ -619,8 +643,8 @@ fn retain_unwind_test() {
         let (_, mut rest) = vec.split_tail(1);
         let (_, mut rest) = rest.split_tail(1);
         assert_eq!(rest.as_slice_mut(), &mut [3, 4, 5]);
-        let arest = std::panic::AssertUnwindSafe(&mut rest);
-        std::panic::catch_unwind(|| {
+        let arest = AssertUnwindSafe(&mut rest);
+        catch_unwind(|| {
             {arest}.0.retain(|&n| {
                 assert!(n == 3 || n == 4, "{n}");
                 n == 3
@@ -641,6 +665,108 @@ fn retain_zst_test() {
         i % 2 == 1
     });
     assert_eq!(rest.as_slice_mut(), &mut [(), (), ()]);
+}
+
+#[test]
+fn drain_zst_test() {
+    let mut vec = vec![(), (), (), (), (), ()];
+    let (_, mut rest) = vec.split_tail(1);
+    assert_eq!(rest.as_slice_mut(), &mut [(), (), (), (), ()]);
+    rest.drain(1..=3);
+    assert_eq!(rest.as_slice_mut(), &mut [(), ()]);
+}
+
+#[test]
+fn drain_zst_readed_test() {
+    let mut vec = vec![(), (), (), (), (), ()];
+    let (_, mut rest) = vec.split_tail(1);
+    assert_eq!(rest.as_slice_mut(), &mut [(), (), (), (), ()]);
+    assert_eq!(rest.drain(1..=3).next(), Some(()));
+    assert_eq!(rest.as_slice_mut(), &mut [(), ()]);
+}
+
+#[test]
+fn drain_readed_test() {
+    let mut vec = vec![0, 1, 2, 3, 4, 5, 6];
+    let (_, mut rest) = vec.split_tail(1);
+    assert_eq!(rest.as_slice_mut(), &mut [1, 2, 3, 4, 5, 6]);
+    assert_eq!(rest.drain(1..=3).next(), Some(2));
+    assert_eq!(rest.as_slice_mut(), &mut [1, 5, 6]);
+}
+
+#[test]
+fn drain_all_readed_test() {
+    let mut vec = vec![0, 1, 2, 3, 4, 5, 6];
+    let (_, mut rest) = vec.split_tail(1);
+    assert_eq!(rest.as_slice_mut(), &mut [1, 2, 3, 4, 5, 6]);
+    assert_eq!(rest.drain(1..=3).collect::<Vec<_>>(), vec![2, 3, 4]);
+    assert_eq!(rest.as_slice_mut(), &mut [1, 5, 6]);
+}
+
+#[test]
+fn drain_back_read_test() {
+    let mut vec = vec![0, 1, 2, 3, 4, 5, 6];
+    let (_, mut rest) = vec.split_tail(1);
+    assert_eq!(rest.as_slice_mut(), &mut [1, 2, 3, 4, 5, 6]);
+    assert_eq!(rest.drain(1..=3).next_back(), Some(4));
+    assert_eq!(rest.as_slice_mut(), &mut [1, 5, 6]);
+}
+
+#[test]
+fn drain_back_read_all_test() {
+    let mut vec = vec![0, 1, 2, 3, 4, 5, 6];
+    let (_, mut rest) = vec.split_tail(1);
+    assert_eq!(rest.as_slice_mut(), &mut [1, 2, 3, 4, 5, 6]);
+    assert_eq!(rest.drain(1..=3).rev().collect::<Vec<_>>(),
+               vec![4, 3, 2]);
+    assert_eq!(rest.as_slice_mut(), &mut [1, 5, 6]);
+}
+
+#[test]
+#[should_panic]
+fn drain_out_of_range_test() {
+    let mut vec = vec![0, 1, 2, 3, 4, 5, 6];
+    let (_, mut rest) = vec.split_tail(1);
+    assert_eq!(rest.as_slice_mut(), &mut [1, 2, 3, 4, 5, 6]);
+    rest.drain(6..7);
+}
+
+#[test]
+#[should_panic]
+fn drain_range_ord_fail_test() {
+    let mut vec = vec![0, 1, 2, 3, 4, 5, 6];
+    let (_, mut rest) = vec.split_tail(1);
+    assert_eq!(rest.as_slice_mut(), &mut [1, 2, 3, 4, 5, 6]);
+    rest.drain(4..2);
+}
+
+#[test]
+#[should_panic]
+fn drain_range_greater_end_test() {
+    let mut vec = vec![0, 1, 2, 3, 4, 5, 6];
+    let (_, mut rest) = vec.split_tail(1);
+    assert_eq!(rest.as_slice_mut(), &mut [1, 2, 3, 4, 5, 6]);
+    rest.drain(3..7);
+}
+
+#[test]
+fn drain_panic_test() {
+    let mut vec = vec![
+        Data(0),
+        Data(1),
+        Data(2),
+        Panic(PanicDrop),
+        Data(4),
+        Data(5),
+        Data(6),
+    ];
+    let (_, mut rest) = vec.split_tail(1);
+    assert_eq!(rest.as_slice_mut(), &mut [1, 2, 3, 4, 5, 6]);
+    let drain = AssertUnwindSafe(rest.drain(1..=3));
+    catch_unwind(|| {
+        {drain}.0.for_each(|_| ());
+    }).unwrap_err();
+    assert_eq!(rest.as_slice_mut(), &mut [Data(1), Data(5), Data(6)]);
 }
 
 #[test]

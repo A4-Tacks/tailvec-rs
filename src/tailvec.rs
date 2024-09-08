@@ -223,6 +223,16 @@ impl<'a, T, V: VecLike<T = T>> TailVec<'a, T, V> {
         unsafe { self.parts.as_mut() }
     }
 
+    /// Like the [`Vec::as_ptr`]
+    pub fn as_ptr(&self) -> *const T {
+        self.parts.as_ptr().cast()
+    }
+
+    /// Like the [`Vec::as_mut_ptr`]
+    pub fn as_mut_ptr(&mut self) -> *mut T {
+        self.parts.as_ptr().cast()
+    }
+
     /// Get tail partial slice
     ///
     /// # Examples
