@@ -8,6 +8,7 @@ use std::{
     marker::PhantomData,
     mem::{transmute, MaybeUninit},
     ops::{Deref, DerefMut, Index, IndexMut},
+    panic::{RefUnwindSafe, UnwindSafe},
     ptr::{self, NonNull},
 };
 
@@ -800,6 +801,26 @@ impl<'a, T, V: VecLike<T = T>> Extend<T> for &'a mut TailVec<'_, T, V> {
                 }
             })
     }
+}
+impl<'a, T, V> UnwindSafe for TailVec<'_, T, V>
+where V: UnwindSafe + RefUnwindSafe + VecLike<T = T>,
+      T: UnwindSafe + RefUnwindSafe,
+{
+}
+impl<'a, T, V> RefUnwindSafe for TailVec<'_, T, V>
+where V: RefUnwindSafe + VecLike<T = T>,
+      T: RefUnwindSafe,
+{
+}
+unsafe impl<'a, T, V> Send for TailVec<'_, T, V>
+where V: Send + VecLike<T = T>,
+      T: Send,
+{
+}
+unsafe impl<'a, T, V> Sync for TailVec<'_, T, V>
+where V: Sync + VecLike<T = T>,
+      T: Sync,
+{
 }
 
 #[cfg(test)]

@@ -544,6 +544,23 @@ fn retain_unwind_test() {
     }
 }
 
+#[test]
+fn send_test() {
+    let mut vec: Vec<i32> = vec![1, 2, 3, 4, 5];
+    let (_, mut rest) = vec.split_tail(1);
+    let (_, mut rest) = rest.split_tail(1);
+    assert_eq!(rest.as_slice_mut(), &mut [3, 4, 5]);
+    assert_eq!(rest.pop(), Some(5));
+    let mut rest = std::thread::scope(|scope| {
+        scope.spawn(|| {
+            assert_eq!(rest.pop(), Some(4));
+            rest
+        }).join().unwrap()
+    });
+    assert_eq!(rest.pop(), Some(3));
+    assert_eq!(rest.pop(), None);
+}
+
 fn _borrow_sign_test<'a, T>(x: &'a mut TailVec<'a, T>) -> &'a mut [T] {
     x.as_slice_mut()
 }
