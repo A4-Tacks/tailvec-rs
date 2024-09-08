@@ -428,6 +428,190 @@ impl<'a, T, V: VecLike<T = T>> TailVec<'a, T, V> {
         Some(value)
     }
 
+    /// Shortens [`TailVec`], keeping the first `len` elements,
+    /// and dropping the rest.
+    ///
+    /// If `len` greater than or equal to [`self.len()`], this has no operation.
+    ///
+    /// # Examples
+    ///
+    /// Truncating 5 elements to 2 elements:
+    ///
+    /// ```
+    /// # use tailvec::*;
+    /// let mut vec = vec![1, 2, 3, 4, 5];
+    /// let (_, mut vec) = vec.split_tail(0);
+    /// vec.truncate(2);
+    /// assert_eq!(vec, [1, 2]);
+    /// ```
+    ///
+    /// No truncating when `len` greater [`self.len()`]
+    ///
+    /// ```
+    /// # use tailvec::*;
+    /// let mut vec = vec![1, 2, 3];
+    /// let (_, mut vec) = vec.split_tail(0);
+    /// vec.truncate(8);
+    /// assert_eq!(vec, [1, 2, 3]);
+    /// ```
+    ///
+    /// Truncating when `len == 0` is equivalent to calling [`clear`] method:
+    ///
+    /// ```
+    /// # use tailvec::*;
+    /// let mut vec = vec![1, 2, 3];
+    /// let (_, mut vec) = vec.split_tail(0);
+    /// vec.truncate(0);
+    /// assert_eq!(vec, []);
+    /// ```
+    ///
+    /// [`self.len()`]: TailVec::len
+    /// [`clear`]: TailVec::clear
+    pub fn truncate(&mut self, len: usize) {
+        for _ in len..self.len() {
+            self.pop();
+        }
+        debug_assert!(
+            self.len() <= len,
+            "self.len (is {}) <= len (is {len})",
+            self.len());
+    }
+
+    /// Clears the [`self`], removing all values.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use tailvec::*;
+    /// let mut vec = vec![1, 2, 3];
+    /// let (_, mut vec) = vec.split_tail(0);
+    /// assert_eq!(vec, [1, 2, 3]);
+    /// vec.clear();
+    /// assert_eq!(vec, []);
+    /// ```
+    ///
+    /// [`self`]: TailVec
+    pub fn clear(&mut self) {
+        let elements: *mut [T] = self.as_slice_mut();
+
+        unsafe {
+            self.set_len(0);
+            ptr::drop_in_place(elements);
+        }
+    }
+
+    /// Resizes, until [`len()`] equal to `new_len`.
+    ///
+    /// Extend the length using new value from the [`Clone::clone`] of `value`.
+    ///
+    /// # Results
+    /// - [`Err`] when `new_len` greater than [`capacity()`],
+    ///   then [`len()`] will not change.
+    ///
+    /// # Examples
+    ///
+    /// `new_len` greater than [`capacity()`]
+    ///
+    /// ```
+    /// # use tailvec::*;
+    /// let mut vec = vec![1, 2, 3];
+    /// vec.reserve_exact(2);
+    /// let (_, mut vec) = vec.split_tail(0);
+    /// assert_eq!(vec.capacity(), 5);
+    ///
+    /// assert_eq!(vec, [1, 2, 3]);
+    /// assert_eq!(vec.resize(6, 8), Err(8)); // Overflow of capacity
+    /// assert_eq!(vec, [1, 2, 3]);
+    ///
+    /// assert_eq!(vec.resize(5, 8), Ok(())); // Success!
+    /// assert_eq!(vec, [1, 2, 3, 8, 8]);
+    ///
+    /// assert_eq!(vec.resize(2, 8), Ok(())); // Truncated
+    /// assert_eq!(vec, [1, 2]);
+    /// ```
+    ///
+    /// [`len()`]: TailVec::len
+    /// [`capacity()`]: TailVec::capacity
+    pub fn resize(&mut self, new_len: usize, value: T) -> Result<(), T>
+    where T: Clone,
+    {
+        if new_len > self.capacity() {
+            return Err(value);
+        }
+
+        if new_len <= self.len() {
+            self.truncate(new_len);
+        } else {
+            for _ in self.len()+1..new_len {
+                let res = self.push(value.clone());
+                debug_assert!(res.is_ok());
+            }
+            if self.len() != new_len {
+                let res = self.push(value);
+                debug_assert!(res.is_ok());
+            }
+        }
+        debug_assert_eq!(self.len(), new_len);
+
+        Ok(())
+    }
+
+    /// Resizes, until [`len()`] equal to `new_len`.
+    ///
+    /// Extend the length using new value from the results of calling `f`
+    ///
+    /// # Results
+    /// - [`Err`] when `new_len` greater than [`capacity()`],
+    ///   then [`len()`] will not change.
+    ///
+    /// # Examples
+    ///
+    /// `new_len` greater than [`capacity()`]
+    ///
+    /// ```
+    /// # use tailvec::*;
+    /// let mut vec = vec![1, 2, 3];
+    /// vec.reserve_exact(2);
+    /// let (_, mut vec) = vec.split_tail(0);
+    /// assert_eq!(vec.capacity(), 5);
+    ///
+    /// assert_eq!(vec, [1, 2, 3]);
+    /// assert!(vec.resize_with(6, || 8).is_err()); // Overflow of capacity
+    /// assert_eq!(vec, [1, 2, 3]);
+    ///
+    /// assert!(vec.resize_with(5, || 8).is_ok()); // Success!
+    /// assert_eq!(vec, [1, 2, 3, 8, 8]);
+    ///
+    /// assert!(vec.resize_with(2, || 8).is_ok()); // Truncated
+    /// assert_eq!(vec, [1, 2]);
+    /// ```
+    ///
+    /// [`len()`]: TailVec::len
+    /// [`capacity()`]: TailVec::capacity
+    pub fn resize_with<F>(&mut self,
+        new_len: usize,
+        mut f: F,
+    ) -> Result<(), F>
+    where F: FnMut() -> T,
+    {
+        if new_len > self.capacity() {
+            return Err(f);
+        }
+
+        if new_len <= self.len() {
+            self.truncate(new_len);
+        } else {
+            for _ in self.len()..new_len {
+                let element = f();
+                let res = self.push(element);
+                debug_assert!(res.is_ok());
+            }
+        }
+        debug_assert_eq!(self.len(), new_len);
+
+        Ok(())
+    }
+
     /// Remove and return element of index
     ///
     /// *See [`Vec::remove`] for more documents*
@@ -574,7 +758,7 @@ impl<'a, T, V: VecLike<T = T>> TailVec<'a, T, V> {
     /// assert_eq!(rest.insert(4, 6), Ok(()));
     /// assert_eq!(rest, &mut [2, 3, 4, 5, 6]);
     ///
-    /// assert_eq!(rest.insert(5, 7), Err(7)); // overflow of capacity
+    /// assert_eq!(rest.insert(5, 7), Err(7)); // Overflow of capacity
     /// assert_eq!(rest, &mut [2, 3, 4, 5, 6]);
     /// ```
     ///
@@ -797,7 +981,7 @@ impl<'a, T, V: VecLike<T = T>> Extend<T> for &'a mut TailVec<'_, T, V> {
         iter.into_iter()
             .for_each(|ele| {
                 if self.push(ele).is_err() {
-                    panic!("overflow of capacity when extend elements")
+                    panic!("Overflow of capacity when extend elements")
                 }
             })
     }
