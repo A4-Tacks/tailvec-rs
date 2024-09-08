@@ -106,6 +106,43 @@ fn push_test() {
 }
 
 #[test]
+fn push_zst_test() {
+    let mut vec = Vec::new(); // zst inf capacity!
+    vec.extend([()]);
+    let (left, mut rest) = vec.split_tail(1);
+    assert_eq!(left.len(), 1);
+    assert_eq!(rest.len(), 0);
+    assert_eq!(rest.capacity(), usize::MAX-1);
+    assert_eq!(rest.split_point(), 1);
+    assert_eq!(rest.vec_len(), 1);
+    assert_eq!(rest.vec_capacity(), usize::MAX);
+    assert_eq!(left, [()]);
+    assert_eq!(rest, []);
+    assert_eq!(rest.push(()), Ok(()));
+    assert_eq!(rest.vec_len(), 2);
+    assert_eq!(rest.vec_capacity(), usize::MAX);
+    assert_eq!(rest.push(()), Ok(()));
+    assert_eq!(rest.vec_len(), 3);
+    assert_eq!(rest.vec_capacity(), usize::MAX);
+    assert_eq!(rest, [(), ()]);
+    assert_eq!(rest.push(()), Ok(()));
+    assert_eq!(rest.vec_len(), 4);
+    assert_eq!(rest.vec_capacity(), usize::MAX);
+    assert_eq!(rest.push(()), Ok(()));
+    assert_eq!(rest.vec_len(), 5);
+    assert_eq!(rest.vec_capacity(), usize::MAX);
+    assert_eq!(rest, [(), (), (), ()]);
+    assert_eq!(rest.push(()), Ok(()));
+    assert_eq!(rest.vec_len(), 6);
+    assert_eq!(rest.vec_capacity(), usize::MAX);
+    assert_eq!(rest, [(), (), (), (), ()]);
+    assert_eq!(rest.push(()), Ok(()));
+    assert_eq!(rest.vec_len(), 7);
+    assert_eq!(rest.vec_capacity(), usize::MAX);
+    assert_eq!(rest, [(), (), (), (), (), ()]);
+}
+
+#[test]
 fn pop_test() {
     let mut vec = Vec::with_capacity(5);
     vec.extend([Box::new("a"), Box::new("b")]);
@@ -152,6 +189,55 @@ fn pop_test() {
     }
     drop(rest);
     assert_eq!(left, [Box::new("a")]);
+}
+
+#[test]
+fn pop_zst_test() {
+    let mut vec = Vec::with_capacity(5);
+    vec.extend([(), ()]);
+    let (left, mut rest) = vec.split_tail(1);
+    assert_eq!(left.len(), 1);
+    assert_eq!(rest.len(), 1);
+    assert_eq!(rest.capacity(), usize::MAX-1);
+    assert_eq!(rest.split_point(), 1);
+    assert_eq!(rest.vec_len(), 2);
+    assert_eq!(rest.vec_capacity(), usize::MAX);
+    assert_eq!(left, [()]);
+    assert_eq!(rest, [()]);
+    assert_eq!(rest.pop(), Some(()));
+    assert_eq!(rest, []);
+    assert_eq!(left.len(), 1);
+    assert_eq!(rest.len(), 0);
+    assert_eq!(rest.capacity(), usize::MAX-1);
+    assert_eq!(rest.split_point(), 1);
+    assert_eq!(rest.vec_len(), 1);
+    assert_eq!(rest.vec_capacity(), usize::MAX);
+    assert_eq!(left, [()]);
+    assert_eq!(rest, []);
+    assert_eq!(rest.pop(), None);
+    assert_eq!(rest, []);
+    assert_eq!(left.len(), 1);
+    assert_eq!(rest.len(), 0);
+    assert_eq!(rest.capacity(), usize::MAX-1);
+    assert_eq!(rest.split_point(), 1);
+    assert_eq!(rest.vec_len(), 1);
+    assert_eq!(rest.vec_capacity(), usize::MAX);
+    assert_eq!(rest.pop(), None);
+    assert_eq!(rest.pop(), None);
+    assert_eq!(left, [()]);
+
+    for _ in 0..5 {
+        assert_eq!(rest.pop(), None);
+        assert_eq!(rest, []);
+        assert_eq!(left.len(), 1);
+        assert_eq!(rest.len(), 0);
+        assert_eq!(rest.capacity(), usize::MAX-1);
+        assert_eq!(rest.split_point(), 1);
+        assert_eq!(rest.vec_len(), 1);
+        assert_eq!(rest.vec_capacity(), usize::MAX);
+    }
+    drop(rest);
+    assert_eq!(left, [()]);
 }
 
 #[test]
@@ -542,6 +628,19 @@ fn retain_unwind_test() {
         }).unwrap_err();
         assert_eq!(rest.as_slice_mut(), &mut [3, /*panic point*/5]);
     }
+}
+
+#[test]
+fn retain_zst_test() {
+    let mut vec = vec![(), (), (), (), (), ()];
+    let (_, mut rest) = vec.split_tail(1);
+    assert_eq!(rest.as_slice_mut(), &mut [(), (), (), (), ()]);
+    let mut i = 0;
+    rest.retain(|_| {
+        i += 1;
+        i % 2 == 1
+    });
+    assert_eq!(rest.as_slice_mut(), &mut [(), (), ()]);
 }
 
 #[test]
