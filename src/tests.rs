@@ -472,6 +472,76 @@ fn retain_unwind_test() {
         }).unwrap_err();
         assert_eq!(rest.as_slice_mut(), &mut [/*panic point*/3]);
     }
+    {
+        let mut vec: Vec<i32> = vec![1, 2, 3, 4, 5];
+        let (_, mut rest) = vec.split_tail(1);
+        let (_, mut rest) = rest.split_tail(1);
+        assert_eq!(rest.as_slice_mut(), &mut [3, 4, 5]);
+        let arest = std::panic::AssertUnwindSafe(&mut rest);
+        std::panic::catch_unwind(|| {
+            {arest}.0.retain(|&n| {
+                assert_eq!(n, 3);
+                true
+            });
+        }).unwrap_err();
+        assert_eq!(rest.as_slice_mut(), &mut [3, /*panic point*/4, 5]);
+    }
+    {
+        let mut vec: Vec<i32> = vec![1, 2, 3, 4, 5];
+        let (_, mut rest) = vec.split_tail(1);
+        let (_, mut rest) = rest.split_tail(1);
+        assert_eq!(rest.as_slice_mut(), &mut [3, 4, 5]);
+        let arest = std::panic::AssertUnwindSafe(&mut rest);
+        std::panic::catch_unwind(|| {
+            {arest}.0.retain(|&n| {
+                assert_eq!(n, 3);
+                false
+            });
+        }).unwrap_err();
+        assert_eq!(rest.as_slice_mut(), &mut [/*panic point*/4, 5]);
+    }
+    {
+        let mut vec: Vec<i32> = vec![1, 2, 3, 4, 5];
+        let (_, mut rest) = vec.split_tail(1);
+        let (_, mut rest) = rest.split_tail(1);
+        assert_eq!(rest.as_slice_mut(), &mut [3, 4, 5]);
+        let arest = std::panic::AssertUnwindSafe(&mut rest);
+        std::panic::catch_unwind(|| {
+            {arest}.0.retain(|&n| {
+                assert!(n == 3 || n == 4, "{n}");
+                true
+            });
+        }).unwrap_err();
+        assert_eq!(rest.as_slice_mut(), &mut [3, 4, /*panic point*/5]);
+    }
+    {
+        let mut vec: Vec<i32> = vec![1, 2, 3, 4, 5];
+        let (_, mut rest) = vec.split_tail(1);
+        let (_, mut rest) = rest.split_tail(1);
+        assert_eq!(rest.as_slice_mut(), &mut [3, 4, 5]);
+        let arest = std::panic::AssertUnwindSafe(&mut rest);
+        std::panic::catch_unwind(|| {
+            {arest}.0.retain(|&n| {
+                assert!(n == 3 || n == 4, "{n}");
+                false
+            });
+        }).unwrap_err();
+        assert_eq!(rest.as_slice_mut(), &mut [/*panic point*/5]);
+    }
+    {
+        let mut vec: Vec<i32> = vec![1, 2, 3, 4, 5];
+        let (_, mut rest) = vec.split_tail(1);
+        let (_, mut rest) = rest.split_tail(1);
+        assert_eq!(rest.as_slice_mut(), &mut [3, 4, 5]);
+        let arest = std::panic::AssertUnwindSafe(&mut rest);
+        std::panic::catch_unwind(|| {
+            {arest}.0.retain(|&n| {
+                assert!(n == 3 || n == 4, "{n}");
+                n == 3
+            });
+        }).unwrap_err();
+        assert_eq!(rest.as_slice_mut(), &mut [3, /*panic point*/5]);
+    }
 }
 
 fn _borrow_sign_test<'a, T>(x: &'a mut TailVec<'a, T>) -> &'a mut [T] {
