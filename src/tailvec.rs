@@ -28,14 +28,11 @@ unsafe fn slice_assume_init_mut<T>(
 /// Like vec struct trait
 ///
 /// # Safety
-/// - [`..self.len()`] of [`self.spare_capacity_mut()`] must be initialized
 /// - [`self.capacity()`] must be equals [`self.len()`]
 ///   plus [`self.spare_capacity_mut().len()`]
 ///
 /// [`self.len()`]: VecLike::len
-/// [`..self.len()`]: VecLike::len
 /// [`self.capacity()`]: VecLike::capacity
-/// [`self.spare_capacity_mut()`]: VecLike::spare_capacity_mut
 /// [`self.spare_capacity_mut().len()`]: VecLike::spare_capacity_mut
 pub unsafe trait VecLike {
     type T;
