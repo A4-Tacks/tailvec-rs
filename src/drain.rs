@@ -140,7 +140,7 @@ unsafe impl<'a, V: VecLike> Sync for Drain<'a, V> where V::T: Sync {
 }
 impl<'a, V: VecLike> Drop for Drain<'a, V> {
     fn drop(&mut self) {
-        let is_zst = size_of::<V::T>() == 0;
+        let is_zst = mem::size_of::<V::T>() == 0;
 
         let iter = mem::take(&mut self.iter);
         let drop_len = iter.len();
