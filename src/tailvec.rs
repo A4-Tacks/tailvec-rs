@@ -34,6 +34,7 @@ unsafe fn slice_assume_init_mut<T>(
 ///
 /// [`self.len()`]: VecLike::len
 /// [`..self.len()`]: VecLike::len
+/// [`self.capacity()`]: VecLike::capacity
 /// [`self.spare_capacity_mut()`]: VecLike::spare_capacity_mut
 /// [`self.spare_capacity_mut().len()`]: VecLike::spare_capacity_mut
 pub unsafe trait VecLike {
