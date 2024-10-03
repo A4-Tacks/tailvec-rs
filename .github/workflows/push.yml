@@ -24,5 +24,6 @@ jobs:
         run: cargo test --verbose --release
       - name: Run docs
         run: |
-          cargo doc --verbose --color=never 2>&1 |
+          set -o pipefail &&
+            cargo doc --verbose --color=never 2>&1 |
             awk '/^warning:/{fail=1}END{exit fail}'
