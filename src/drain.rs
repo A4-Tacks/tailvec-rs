@@ -1,7 +1,7 @@
 //! The implementation comes from std
 
-use std::{
-    fmt::Debug,
+use core::{
+    fmt::{self, Debug},
     iter::FusedIterator,
     mem,
     ops::{Range, RangeBounds},
@@ -193,7 +193,7 @@ impl<'a, V: VecLike> Drain<'a, V> {
 impl<'a, V: VecLike> Debug for Drain<'a, V>
 where V::T: Debug,
 {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_tuple("Drain").field(&self.iter.as_slice()).finish()
     }
 }

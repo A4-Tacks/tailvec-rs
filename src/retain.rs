@@ -1,5 +1,4 @@
-use std::ptr;
-
+use core::ptr;
 use super::*;
 
 impl<'a, T, V: VecLike<T = T>> TailVec<'a, T, V> {

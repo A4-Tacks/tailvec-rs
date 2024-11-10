@@ -1,15 +1,19 @@
 [package]
 name = "tailvec"
-version = "0.2.8"
+version = "0.2.9"
 edition = "2021"
 
 authors = ["A4-Tacks <wdsjxhno1001@163.com>"]
-keywords = ["vec", "vector", "split"]
-categories = ["data-structures"]
+keywords = ["vec", "vector", "split", "slice"]
+categories = ["no-std", "data-structures"]
 description = "Split Vec to mutable slice and TailVec, the TailVec can push or pop etc"
 
 license = "MIT"
 repository = "https://github.com/A4-Tacks/tailvec-rs"
 readme = "README.md"
+
+[features]
+default = ["std"]
+std = []
 
 [dependencies]

@@ -1,4 +1,4 @@
-use std::ops::{Bound, Range, RangeBounds, RangeTo};
+use core::ops::{Bound, Range, RangeBounds, RangeTo};
 
 #[inline]
 #[track_caller]

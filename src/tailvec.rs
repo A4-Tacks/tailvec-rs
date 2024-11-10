@@ -1,16 +1,20 @@
 #![allow(clippy::partialeq_ne_impl)]
 
-use std::{
+use core::{
     borrow::{Borrow, BorrowMut},
     cmp::Ordering,
-    fmt::Debug,
-    hash::Hash,
+    fmt::{self, Debug},
+    hash::{self, Hash},
     marker::PhantomData,
     mem::{transmute, MaybeUninit},
     ops::{Deref, DerefMut, Index, IndexMut},
     panic::{RefUnwindSafe, UnwindSafe},
     ptr::{self, NonNull},
 };
+#[cfg(not(feature = "std"))]
+extern crate alloc;
+#[cfg(not(feature = "std"))]
+use alloc::vec::Vec;
 
 unsafe fn slice_assume_init<T>(
     slice: &[MaybeUninit<T>],
@@ -801,7 +805,7 @@ impl<'a, T, V: VecLike<T = T>> TailVec<'a, T, V> {
     }
 }
 impl<'a, T: Debug, V: VecLike<T = T>> Debug for TailVec<'a, T, V> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.as_slice().fmt(f)
     }
 }
@@ -949,7 +953,7 @@ impl<'a, T, V: VecLike<T = T>> BorrowMut<[T]> for TailVec<'a, T, V> {
     }
 }
 impl<'a, T: Hash, V: VecLike<T = T>> Hash for TailVec<'a, T, V> {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+    fn hash<H: hash::Hasher>(&self, state: &mut H) {
         self.as_slice().hash(state)
     }
 }
