@@ -1,10 +1,10 @@
 [package]
 name = "tailvec"
-version = "0.2.9"
+version = "0.2.10"
 edition = "2021"
 
 authors = ["A4-Tacks <wdsjxhno1001@163.com>"]
-keywords = ["vec", "vector", "split", "slice"]
+keywords = ["no_std", "vec", "vector", "split", "slice"]
 categories = ["no-std", "data-structures"]
 description = "Split Vec to mutable slice and TailVec, the TailVec can push or pop etc"
 
