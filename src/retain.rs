@@ -1,5 +1,7 @@
+#![allow(clippy::redundant_else)]
+
 use core::ptr;
-use super::*;
+use super::{TailVec, VecLike};
 
 impl<'a, T, V: VecLike<T = T>> TailVec<'a, T, V> {
     /// Retains only the elements specified by the predicate.
@@ -41,7 +43,7 @@ impl<'a, T, V: VecLike<T = T>> TailVec<'a, T, V> {
     {
         self.retain_mut(|ele| {
             f(ele)
-        })
+        });
     }
 
     /// Retains only the elements specified by the predicate, passing a mutable reference to it.
@@ -151,6 +153,6 @@ impl<'a, T, V: VecLike<T = T>> TailVec<'a, T, V> {
         g.run::<F, false>(&mut f);
         g.run::<F, true>(&mut f);
 
-        drop(g)
+        drop(g);
     }
 }

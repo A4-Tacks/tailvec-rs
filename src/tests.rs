@@ -297,7 +297,7 @@ fn default_test() {
         assert_eq!(val.split_point(), 0);
         assert_eq!(val.vec_len(), 0);
         assert_eq!(val.vec_capacity(), 0);
-        assert_eq!(val.is_empty(), true);
+        assert!(val.is_empty());
     }
     {
         let val: TailVec<i32, TailVec<i32>> = TailVec::default();
@@ -306,7 +306,7 @@ fn default_test() {
         assert_eq!(val.split_point(), 0);
         assert_eq!(val.vec_len(), 0);
         assert_eq!(val.vec_capacity(), 0);
-        assert_eq!(val.is_empty(), true);
+        assert!(val.is_empty());
     }
     {
         let val: TailVec<i32, TailVec<i32, TailVec<i32>>> = TailVec::default();
@@ -315,7 +315,7 @@ fn default_test() {
         assert_eq!(val.split_point(), 0);
         assert_eq!(val.vec_len(), 0);
         assert_eq!(val.vec_capacity(), 0);
-        assert_eq!(val.is_empty(), true);
+        assert!(val.is_empty());
     }
 }
 
@@ -328,7 +328,7 @@ fn into_slice() {
         assert_eq!(val.split_point(), 0);
         assert_eq!(val.vec_len(), 0);
         assert_eq!(val.vec_capacity(), 0);
-        assert_eq!(val.is_empty(), true);
+        assert!(val.is_empty());
         let slice = val.into_slice();
         assert_eq!(slice.len(), 0);
         assert_eq!(slice, &mut []);
@@ -340,7 +340,7 @@ fn into_slice() {
         assert_eq!(val.split_point(), 0);
         assert_eq!(val.vec_len(), 0);
         assert_eq!(val.vec_capacity(), 0);
-        assert_eq!(val.is_empty(), true);
+        assert!(val.is_empty());
         let slice = val.into_slice();
         assert_eq!(slice.len(), 0);
         assert_eq!(slice, &mut []);
@@ -352,7 +352,7 @@ fn into_slice() {
         assert_eq!(val.split_point(), 0);
         assert_eq!(val.vec_len(), 0);
         assert_eq!(val.vec_capacity(), 0);
-        assert_eq!(val.is_empty(), true);
+        assert!(val.is_empty());
         let slice = val.into_slice();
         assert_eq!(slice.len(), 0);
         assert_eq!(slice, &mut []);
@@ -660,7 +660,7 @@ fn retain_zst_test() {
     let (_, mut rest) = vec.split_tail(1);
     assert_eq!(rest.as_slice_mut(), &mut [(), (), (), (), ()]);
     let mut i = 0;
-    rest.retain(|_| {
+    rest.retain(|()| {
         i += 1;
         i % 2 == 1
     });

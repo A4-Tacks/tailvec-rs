@@ -4,7 +4,7 @@ use core::{
     borrow::{Borrow, BorrowMut},
     cmp::Ordering,
     fmt::{self, Debug},
-    hash::{self, Hash},
+    hash::{Hash, Hasher},
     marker::PhantomData,
     mem::{transmute, MaybeUninit},
     ops::{Deref, DerefMut, Index, IndexMut},
@@ -16,12 +16,14 @@ extern crate alloc;
 #[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
 
+#[allow(clippy::transmute_ptr_to_ptr)]
 unsafe fn slice_assume_init<T>(
     slice: &[MaybeUninit<T>],
 ) -> &[T] {
     unsafe { transmute(slice) }
 }
 
+#[allow(clippy::transmute_ptr_to_ptr)]
 unsafe fn slice_assume_init_mut<T>(
     slice: &mut [MaybeUninit<T>],
 ) -> &mut [T] {
@@ -81,7 +83,7 @@ unsafe impl<T> VecLike for Vec<T> {
 
     unsafe fn set_len(&mut self, new_len: usize) {
         unsafe {
-            self.set_len(new_len)
+            self.set_len(new_len);
         }
     }
 }
@@ -111,8 +113,6 @@ unsafe impl<T, V: VecLike<T = T>> VecLike for TailVec<'_, T, V> {
 
 /// Split at index, tail part is [`TailVec`]
 pub trait SplitTail: VecLike + Sized {
-    #![allow(private_bounds)]
-
     /// Split at index, tail part is [`TailVec`]
     ///
     /// It can call [`push`] and [`pop`] etc.
@@ -200,7 +200,7 @@ impl<'a, T, V: VecLike<T = T>> Drop for TailVec<'a, T, V> {
 
         if let Some(vec) = &mut self.vec {
             unsafe {
-                vec.as_mut().set_len(mid + tail_len)
+                vec.as_mut().set_len(mid + tail_len);
             }
         } else {
             debug_assert_eq!(tail_len, 0, "len bugs, please report issue");
@@ -226,6 +226,7 @@ impl<'a, T, V: VecLike<T = T>> TailVec<'a, T, V> {
     }
 
     /// Like the [`Vec::as_ptr`]
+    #[must_use]
     pub fn as_ptr(&self) -> *const T {
         self.parts.as_ptr().cast()
     }
@@ -245,6 +246,7 @@ impl<'a, T, V: VecLike<T = T>> TailVec<'a, T, V> {
     /// assert_eq!(left, &mut [1, 2]);
     /// assert_eq!(rest.as_slice(), &[3]);
     /// ```
+    #[must_use]
     pub fn as_slice(&self) -> &[T] {
         unsafe {
             let slice = self.parts.as_ref();
@@ -278,6 +280,7 @@ impl<'a, T, V: VecLike<T = T>> TailVec<'a, T, V> {
     /// let (_, rest) = vec.split_tail(2);
     /// assert_eq!(rest.into_slice(), &mut [3]);
     /// ```
+    #[must_use]
     pub fn into_slice(self) -> &'a mut [T] {
         let rng = ..self.len();
         let mut parts = self.parts;
@@ -320,6 +323,7 @@ impl<'a, T, V: VecLike<T = T>> TailVec<'a, T, V> {
     /// assert_eq!(rest.len(), 2);
     /// assert_eq!(rest.split_point(), 3);
     /// ```
+    #[must_use]
     pub fn split_point(&self) -> usize {
         self.vec_capacity() - self.capacity()
     }
@@ -337,6 +341,7 @@ impl<'a, T, V: VecLike<T = T>> TailVec<'a, T, V> {
     /// assert_eq!(rest.len(), 2);
     /// assert_eq!(rest.vec_len(), 5);
     /// ```
+    #[must_use]
     pub fn vec_len(&self) -> usize {
         self.split_point() + self.len()
     }
@@ -356,11 +361,11 @@ impl<'a, T, V: VecLike<T = T>> TailVec<'a, T, V> {
             0 => (),
             ..=-1 => {
                 let new_len = old_len
-                    .checked_sub(-offset as usize).ok_or(())?;
+                    .checked_sub(offset.unsigned_abs()).ok_or(())?;
                 unsafe { self.set_len(new_len) }
             },
             1.. => {
-                let new_len = old_len + offset as usize;
+                let new_len = old_len + offset.unsigned_abs();
                 if new_len > cap { return Err(()); }
                 unsafe { self.set_len(new_len) }
             },
@@ -371,7 +376,7 @@ impl<'a, T, V: VecLike<T = T>> TailVec<'a, T, V> {
     /// Push a value to tail partial,
     /// but [`len()`] must be less than [`capacity()`]
     ///
-    /// # Results
+    /// # Errors
     /// - [`Err`] when `new_len` greater than or equal [`capacity()`]
     ///
     /// # Examples
@@ -516,7 +521,7 @@ impl<'a, T, V: VecLike<T = T>> TailVec<'a, T, V> {
     ///
     /// Extend the length using new value from the [`Clone::clone`] of `value`.
     ///
-    /// # Results
+    /// # Errors
     /// - [`Err`] when `new_len` greater than [`capacity()`],
     ///   then [`len()`] will not change.
     ///
@@ -572,7 +577,7 @@ impl<'a, T, V: VecLike<T = T>> TailVec<'a, T, V> {
     ///
     /// Extend the length using new value from the results of calling `f`
     ///
-    /// # Results
+    /// # Errors
     /// - [`Err`] when `new_len` greater than [`capacity()`],
     ///   then [`len()`] will not change.
     ///
@@ -748,7 +753,7 @@ impl<'a, T, V: VecLike<T = T>> TailVec<'a, T, V> {
     /// # Panics
     /// - `index` greater than [`len()`]
     ///
-    /// # Results
+    /// # Errors
     /// - [`Err`] when `new_len` greater than or equal [`capacity()`]
     ///
     /// # Examples
@@ -953,8 +958,8 @@ impl<'a, T, V: VecLike<T = T>> BorrowMut<[T]> for TailVec<'a, T, V> {
     }
 }
 impl<'a, T: Hash, V: VecLike<T = T>> Hash for TailVec<'a, T, V> {
-    fn hash<H: hash::Hasher>(&self, state: &mut H) {
-        self.as_slice().hash(state)
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.as_slice().hash(state);
     }
 }
 impl<'a, T, V: VecLike<T = T>> IntoIterator for TailVec<'a, T, V> {
@@ -992,28 +997,27 @@ impl<'a, T, V: VecLike<T = T>> Extend<T> for &'a mut TailVec<'_, T, V> {
     fn extend<I: IntoIterator<Item = T>>(&mut self, iter: I) {
         iter.into_iter()
             .for_each(|ele| {
-                if self.push(ele).is_err() {
-                    panic!("Overflow of capacity when extend elements")
-                }
-            })
+                assert!(self.push(ele).is_ok(),
+                        "Overflow of capacity when extend elements");
+            });
     }
 }
-impl<'a, T, V> UnwindSafe for TailVec<'_, T, V>
+impl<T, V> UnwindSafe for TailVec<'_, T, V>
 where V: UnwindSafe + RefUnwindSafe + VecLike<T = T>,
       T: UnwindSafe + RefUnwindSafe,
 {
 }
-impl<'a, T, V> RefUnwindSafe for TailVec<'_, T, V>
+impl<T, V> RefUnwindSafe for TailVec<'_, T, V>
 where V: RefUnwindSafe + VecLike<T = T>,
       T: RefUnwindSafe,
 {
 }
-unsafe impl<'a, T, V> Send for TailVec<'_, T, V>
+unsafe impl<T, V> Send for TailVec<'_, T, V>
 where V: Send + VecLike<T = T>,
       T: Send,
 {
 }
-unsafe impl<'a, T, V> Sync for TailVec<'_, T, V>
+unsafe impl<T, V> Sync for TailVec<'_, T, V>
 where V: Sync + VecLike<T = T>,
       T: Sync,
 {

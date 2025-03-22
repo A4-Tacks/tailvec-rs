@@ -85,7 +85,7 @@ impl<'r, 'a, V: VecLike> Drop for DropGuard<'r, 'a, V> {
             if tail != start {
                 let src = src_vec.as_ptr().add(tail);
                 let dst = src_vec.as_mut_ptr().add(start);
-                ptr::copy(src, dst, count)
+                ptr::copy(src, dst, count);
             }
 
             src_vec.set_len(start + count);
@@ -166,7 +166,7 @@ impl<'a, V: VecLike> Drop for Drain<'a, V> {
 
         unsafe {
             let vec_ptr = vec.as_mut().as_mut_ptr();
-            let drop_offset = drop_ptr.offset_from(vec_ptr) as usize;
+            let drop_offset = drop_ptr.offset_from(vec_ptr).try_into().unwrap();
             let to_drop = ptr::slice_from_raw_parts_mut(vec_ptr.add(drop_offset), drop_len);
             ptr::drop_in_place(to_drop);
         }
