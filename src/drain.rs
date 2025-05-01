@@ -11,7 +11,7 @@ use core::{
 
 use crate::{utils, TailVec, VecLike};
 
-impl<'a, T, V: VecLike<T = T>> TailVec<'a, T, V> {
+impl<T, V: VecLike<T = T>> TailVec<'_, T, V> {
     /// Removes the specified range from the vector in bulk, returning all
     /// removed elements as an iterator. If the iterator is dropped before
     /// being fully consumed, it drops the remaining removed elements.
@@ -70,7 +70,7 @@ impl<'a, T, V: VecLike<T = T>> TailVec<'a, T, V> {
 }
 
 struct DropGuard<'r, 'a, V: VecLike>(&'r mut Drain<'a, V>);
-impl<'r, 'a, V: VecLike> Drop for DropGuard<'r, 'a, V> {
+impl<V: VecLike> Drop for DropGuard<'_, '_, V> {
     fn drop(&mut self) {
         // a a a a a d d d i i r r r r r
         //           ^     ^   ^
@@ -112,7 +112,7 @@ pub struct Drain<'a, V: VecLike> where V::T: 'a {
     iter: slice::Iter<'a, V::T>,
     vec: NonNull<TailVec<'a, V::T, V>>,
 }
-impl<'a, V: VecLike> Iterator for Drain<'a, V> {
+impl<V: VecLike> Iterator for Drain<'_, V> {
     type Item = V::T;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -124,21 +124,21 @@ impl<'a, V: VecLike> Iterator for Drain<'a, V> {
         self.iter.size_hint()
     }
 }
-impl<'a, V: VecLike> DoubleEndedIterator for Drain<'a, V> {
+impl<V: VecLike> DoubleEndedIterator for Drain<'_, V> {
     fn next_back(&mut self) -> Option<Self::Item> {
         let ele = self.iter.next_back()?;
         Some(unsafe { ptr::read(ele) })
     }
 }
-impl<'a, V: VecLike> ExactSizeIterator for Drain<'a, V> {
+impl<V: VecLike> ExactSizeIterator for Drain<'_, V> {
 }
-impl<'a, V: VecLike> FusedIterator for Drain<'a, V> {
+impl<V: VecLike> FusedIterator for Drain<'_, V> {
 }
-unsafe impl<'a, V: VecLike> Send for Drain<'a, V> where V::T: Send {
+unsafe impl<V: VecLike> Send for Drain<'_, V> where V::T: Send {
 }
-unsafe impl<'a, V: VecLike> Sync for Drain<'a, V> where V::T: Sync {
+unsafe impl<V: VecLike> Sync for Drain<'_, V> where V::T: Sync {
 }
-impl<'a, V: VecLike> Drop for Drain<'a, V> {
+impl<V: VecLike> Drop for Drain<'_, V> {
     fn drop(&mut self) {
         let is_zst = mem::size_of::<V::T>() == 0;
 
@@ -172,7 +172,7 @@ impl<'a, V: VecLike> Drop for Drain<'a, V> {
         }
     }
 }
-impl<'a, V: VecLike> Drain<'a, V> {
+impl<V: VecLike> Drain<'_, V> {
     /// Get slice of rest elements
     ///
     /// # Examples
@@ -190,7 +190,7 @@ impl<'a, V: VecLike> Drain<'a, V> {
         self.iter.as_slice()
     }
 }
-impl<'a, V: VecLike> Debug for Drain<'a, V>
+impl<V: VecLike> Debug for Drain<'_, V>
 where V::T: Debug,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

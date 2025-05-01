@@ -190,7 +190,7 @@ pub struct TailVec<'a, T, V: VecLike<T = T> = Vec<T>> {
     _phantom: PhantomData<&'a mut T>,
     _phantom_vec: PhantomData<&'a mut V>,
 }
-impl<'a, T, V: VecLike<T = T>> Drop for TailVec<'a, T, V> {
+impl<T, V: VecLike<T = T>> Drop for TailVec<'_, T, V> {
     #[track_caller]
     fn drop(&mut self) {
         let tail_cap = self.capacity();
@@ -208,7 +208,7 @@ impl<'a, T, V: VecLike<T = T>> Drop for TailVec<'a, T, V> {
         }
     }
 }
-impl<'a, T, V: VecLike<T = T>> Default for TailVec<'a, T, V> {
+impl<T, V: VecLike<T = T>> Default for TailVec<'_, T, V> {
     fn default() -> Self {
         let parts = <&[_]>::default();
         Self {
@@ -809,14 +809,14 @@ impl<'a, T, V: VecLike<T = T>> TailVec<'a, T, V> {
         }
     }
 }
-impl<'a, T: Debug, V: VecLike<T = T>> Debug for TailVec<'a, T, V> {
+impl<T: Debug, V: VecLike<T = T>> Debug for TailVec<'_, T, V> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.as_slice().fmt(f)
     }
 }
-impl<'a, T: Eq, V: VecLike<T = T>> Eq for TailVec<'a, T, V> {
+impl<T: Eq, V: VecLike<T = T>> Eq for TailVec<'_, T, V> {
 }
-impl<'a, T: PartialEq, V: VecLike<T = T>> PartialEq for TailVec<'a, T, V> {
+impl<T: PartialEq, V: VecLike<T = T>> PartialEq for TailVec<'_, T, V> {
     fn eq(&self, other: &Self) -> bool {
         self.as_slice() == other.as_slice()
     }
@@ -825,7 +825,7 @@ impl<'a, T: PartialEq, V: VecLike<T = T>> PartialEq for TailVec<'a, T, V> {
         self.as_slice() != other.as_slice()
     }
 }
-impl<'a, T, U, V> PartialEq<[U]> for TailVec<'a, T, V>
+impl<T, U, V> PartialEq<[U]> for TailVec<'_, T, V>
 where T: PartialEq<U>,
       V: VecLike<T = T>,
 {
@@ -837,7 +837,7 @@ where T: PartialEq<U>,
         self.as_slice() != other
     }
 }
-impl<'a, T, U, V> PartialEq<&'_ [U]> for TailVec<'a, T, V>
+impl<T, U, V> PartialEq<&'_ [U]> for TailVec<'_, T, V>
 where T: PartialEq<U>,
       V: VecLike<T = T>,
 {
@@ -849,7 +849,7 @@ where T: PartialEq<U>,
         self.as_slice() != *other
     }
 }
-impl<'a, T, U, V> PartialEq<&'_ mut [U]> for TailVec<'a, T, V>
+impl<T, U, V> PartialEq<&'_ mut [U]> for TailVec<'_, T, V>
 where T: PartialEq<U>,
       V: VecLike<T = T>,
 {
@@ -861,7 +861,7 @@ where T: PartialEq<U>,
         self.as_slice() != *other
     }
 }
-impl<'a, T, U, V, const N: usize> PartialEq<[U; N]> for TailVec<'a, T, V>
+impl<T, U, V, const N: usize> PartialEq<[U; N]> for TailVec<'_, T, V>
 where T: PartialEq<U>,
       V: VecLike<T = T>,
 {
@@ -873,7 +873,7 @@ where T: PartialEq<U>,
         self.as_slice() != other
     }
 }
-impl<'a, T, U, V, const N: usize> PartialEq<&'_ [U; N]> for TailVec<'a, T, V>
+impl<T, U, V, const N: usize> PartialEq<&'_ [U; N]> for TailVec<'_, T, V>
 where T: PartialEq<U>,
       V: VecLike<T = T>,
 {
@@ -885,7 +885,7 @@ where T: PartialEq<U>,
         self.as_slice() != *other
     }
 }
-impl<'a, T, U, V, const N: usize> PartialEq<&'_ mut [U; N]> for TailVec<'a, T, V>
+impl<T, U, V, const N: usize> PartialEq<&'_ mut [U; N]> for TailVec<'_, T, V>
 where T: PartialEq<U>,
       V: VecLike<T = T>,
 {
@@ -897,29 +897,29 @@ where T: PartialEq<U>,
         self.as_slice() != *other
     }
 }
-impl<'a, T: PartialOrd, V: VecLike<T = T>> PartialOrd for TailVec<'a, T, V> {
+impl<T: PartialOrd, V: VecLike<T = T>> PartialOrd for TailVec<'_, T, V> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         self.as_slice().partial_cmp(other.as_slice())
     }
 }
-impl<'a, T: Ord, V: VecLike<T = T>> Ord for TailVec<'a, T, V> {
+impl<T: Ord, V: VecLike<T = T>> Ord for TailVec<'_, T, V> {
     fn cmp(&self, other: &Self) -> Ordering {
         self.as_slice().cmp(other.as_slice())
     }
 }
-impl<'a, T, V: VecLike<T = T>> Deref for TailVec<'a, T, V> {
+impl<T, V: VecLike<T = T>> Deref for TailVec<'_, T, V> {
     type Target = [T];
 
     fn deref(&self) -> &Self::Target {
         self.as_slice()
     }
 }
-impl<'a, T, V: VecLike<T = T>> DerefMut for TailVec<'a, T, V> {
+impl<T, V: VecLike<T = T>> DerefMut for TailVec<'_, T, V> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.as_slice_mut()
     }
 }
-impl<'a, T, V, I> Index<I> for TailVec<'a, T, V>
+impl<T, V, I> Index<I> for TailVec<'_, T, V>
 where V: VecLike<T = T>,
       [T]: Index<I>,
 {
@@ -929,7 +929,7 @@ where V: VecLike<T = T>,
         self.as_slice().index(index)
     }
 }
-impl<'a, T, V, I> IndexMut<I> for TailVec<'a, T, V>
+impl<T, V, I> IndexMut<I> for TailVec<'_, T, V>
 where V: VecLike<T = T>,
       [T]: IndexMut<I>,
 {
@@ -937,27 +937,27 @@ where V: VecLike<T = T>,
         self.as_slice_mut().index_mut(index)
     }
 }
-impl<'a, T, V: VecLike<T = T>> AsRef<[T]> for TailVec<'a, T, V> {
+impl<T, V: VecLike<T = T>> AsRef<[T]> for TailVec<'_, T, V> {
     fn as_ref(&self) -> &[T] {
         self.as_slice()
     }
 }
-impl<'a, T, V: VecLike<T = T>> AsMut<[T]> for TailVec<'a, T, V> {
+impl<T, V: VecLike<T = T>> AsMut<[T]> for TailVec<'_, T, V> {
     fn as_mut(&mut self) -> &mut [T] {
         self.as_slice_mut()
     }
 }
-impl<'a, T, V: VecLike<T = T>> Borrow<[T]> for TailVec<'a, T, V> {
+impl<T, V: VecLike<T = T>> Borrow<[T]> for TailVec<'_, T, V> {
     fn borrow(&self) -> &[T] {
         self.as_slice()
     }
 }
-impl<'a, T, V: VecLike<T = T>> BorrowMut<[T]> for TailVec<'a, T, V> {
+impl<T, V: VecLike<T = T>> BorrowMut<[T]> for TailVec<'_, T, V> {
     fn borrow_mut(&mut self) -> &mut [T] {
         self.as_slice_mut()
     }
 }
-impl<'a, T: Hash, V: VecLike<T = T>> Hash for TailVec<'a, T, V> {
+impl<T: Hash, V: VecLike<T = T>> Hash for TailVec<'_, T, V> {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.as_slice().hash(state);
     }
@@ -986,7 +986,7 @@ impl<'a, T, V: VecLike<T = T>> IntoIterator for &'a mut TailVec<'_, T, V> {
         self.as_slice_mut().iter_mut()
     }
 }
-impl<'a, T, V: VecLike<T = T>> Extend<T> for &'a mut TailVec<'_, T, V> {
+impl<T, V: VecLike<T = T>> Extend<T> for &mut TailVec<'_, T, V> {
     /// Extends a collection with the contents of an iterator.
     ///
     /// # Panics

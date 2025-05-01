@@ -737,6 +737,7 @@ fn drain_range_ord_fail_test() {
     let mut vec = vec![0, 1, 2, 3, 4, 5, 6];
     let (_, mut rest) = vec.split_tail(1);
     assert_eq!(rest.as_slice_mut(), &mut [1, 2, 3, 4, 5, 6]);
+    #[allow(clippy::reversed_empty_ranges)]
     rest.drain(4..2);
 }
 

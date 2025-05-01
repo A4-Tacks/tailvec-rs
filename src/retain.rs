@@ -3,7 +3,7 @@
 use core::ptr;
 use super::{TailVec, VecLike};
 
-impl<'a, T, V: VecLike<T = T>> TailVec<'a, T, V> {
+impl<T, V: VecLike<T = T>> TailVec<'_, T, V> {
     /// Retains only the elements specified by the predicate.
     ///
     /// In other words, remove all elements `e` such that `f(&e)` returns `false`.
@@ -79,7 +79,7 @@ impl<'a, T, V: VecLike<T = T>> TailVec<'a, T, V> {
             deleted_cnt: usize,
         }
 
-        impl<'a, V: VecLike> Drop for Guard<'a, '_, V> {
+        impl<V: VecLike> Drop for Guard<'_, '_, V> {
             fn drop(&mut self) {
                 let Self {
                     ref mut this,
@@ -104,7 +104,7 @@ impl<'a, T, V: VecLike<T = T>> TailVec<'a, T, V> {
             }
         }
 
-        impl<'a, V: VecLike> Guard<'a, '_, V> {
+        impl<V: VecLike> Guard<'_, '_, V> {
             fn run<F, const DELETED: bool>(&mut self, f: &mut F)
             where F: FnMut(&mut V::T) -> bool,
             {
